@@ -2,8 +2,9 @@
   "name": "serverless-next.js-tencent",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-  },
-  "dependencies": {
+  "scripts": {},
+  "dependencies": {},
+  "devDependencies": {
+    "@serverless/core": "^1.1.2"
   }
 }
