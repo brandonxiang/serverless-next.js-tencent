@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {},
-  "dependencies": {},
+  "dependencies": {
+    "@serverless/tencent-apigateway": "^2.0.0",
+    "@serverless/tencent-scf": "^2.0.3"
+  },
   "devDependencies": {
     "@serverless/core": "^1.1.2"
   }
