@@ -1,7 +1,9 @@
 {
   "name": "serverless-next.js-tencent",
   "version": "0.1.0",
-  "scripts": {},
+  "scripts": {
+    "test": "jest"
+  },
   "dependencies": {
     "@serverless/tencent-apigateway": "^2.0.0",
     "@serverless/tencent-scf": "^2.0.3"
@@ -17,11 +19,6 @@
   "jest": {
     "clearMocks": true,
     "testPathIgnorePatterns": [
-      "/.next/",
-      "/node_modules/",
-      "/fixtures/",
-      "/examples/",
-      "<rootDir>/integration"
     ]
   }
 }

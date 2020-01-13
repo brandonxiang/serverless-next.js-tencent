@@ -90,7 +90,7 @@ class NextjsComponent extends Component {
     return await Promise.all([
       fse.writeJson(manifestJson, defaultBuildManifest),
       fse.copy('template/default-scf-handler.js', entryHandler),
-      fse.copy('template/default-converter.js', utilHandler)
+      fse.copy('template/utils.js', utilHandler)
     ]);
   }
 
