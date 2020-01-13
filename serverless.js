@@ -1,8 +1,22 @@
-const { Component } = require("@serverless/core");
-const fse = require("fs-extra");
+const { Component } = require('@serverless/core');
+const fse = require('fs-extra');
 const path = require('path');
+const execa = require('execa');
 
-const isHtmlPage = p => p.endsWith(".html");
+const { join } = path;
+
+const isHtmlPage = p => p.endsWith('.html');
+
+const randomName = () => {
+  const len = 6;
+  const chars = 'ABCDEFGHJKMNPQRSTWXYZabcdefhijkmnprstwxyz2345678';
+  const maxPos = chars.length;
+  let result = '';
+  for (let i = 0; i < len; i++) {
+    result += chars.charAt(Math.floor(Math.random() * maxPos));
+  }
+  return result;
+};
 
 class NextjsComponent extends Component {
   async default(inputs = {}) {
@@ -11,11 +25,15 @@ class NextjsComponent extends Component {
     return this.deploy(inputs);
   }
 
-  async readPagesManifest (nextConfigPath) {
-    const pagePath = join(nextConfigPath, ".next/serverless/pages-manifest.json");
+  async readPagesManifest(nextConfigPath) {
+    const pagePath = join(
+      nextConfigPath,
+      '.next/serverless/pages-manifest.json'
+    );
+    console.log(pagePath);
     const hasServerlessPageManifest = await fse.exists(pagePath);
 
-    if(hasServerlessPageManifest) {
+    if (!hasServerlessPageManifest) {
       return Promise.reject(
         "pages-manifest not found. Check if `next.config.js` target is set to 'serverless'"
       );
@@ -26,62 +44,93 @@ class NextjsComponent extends Component {
     return pagesManifest;
   }
 
-  prepareBuildManifests(nextConfigPath) {
+  async prepareBuildManifests(inputs) {
     const nextConfigPath = inputs.nextConfigDir
       ? path.resolve(inputs.nextConfigDir)
       : process.cwd();
 
-      const pagesManifest = this.readPagesManifest(nextConfigPath);
+    const pagesManifest = await this.readPagesManifest(nextConfigPath);
 
-      const defaultBuildManifest = {
-        pages: {
-          ssr: {
-            dynamic: {},
-            nonDynamic: {}
-          },
-          html: {
-            dynamic: {},
-            nonDynamic: {}
-          }
+    const defaultBuildManifest = {
+      pages: {
+        ssr: {
+          dynamic: {},
+          nonDynamic: {}
         },
-        publicFiles: {},
-        cloudFrontOrigins: {}
-      };
-
-      const ssrPages = defaultBuildManifest.pages.ssr;
-      const htmlPages = defaultBuildManifest.pages.html;
-
-      Object.entries(pagesManifest).forEach(route => {
-        const pageFile = pagesManifest[route];
-        if (isHtmlPage(pageFile)) {
-          htmlPages.nonDynamic[route] = pageFile;
-        } else {
-          ssrPages.nonDynamic[route] = pageFile;
+        html: {
+          dynamic: {},
+          nonDynamic: {}
         }
-      })
+      },
+      publicFiles: {},
+      cloudFrontOrigins: {}
+    };
 
-      return defaultBuildManifest;
+    const ssrPages = defaultBuildManifest.pages.ssr;
+    const htmlPages = defaultBuildManifest.pages.html;
+
+    Object.keys(pagesManifest).forEach(route => {
+      const pageFile = pagesManifest[route];
+      if (isHtmlPage(pageFile)) {
+        htmlPages.nonDynamic[route] = pageFile;
+      } else {
+        ssrPages.nonDynamic[route] = pageFile;
+      }
+    });
+
+    await this.buildHandler(nextConfigPath, defaultBuildManifest);
+
+    return defaultBuildManifest;
   }
-  
+
+  async buildHandler(nextConfigPath, defaultBuildManifest) {
+    const manifestJson = join(nextConfigPath, '.next/serverless/manifest.json');
+    const entryHandler = join(nextConfigPath, '.next/serverless/index.js');
+    const utilHandler = join(nextConfigPath, '.next/serverless/utils.js');
+    return await Promise.all([
+      fse.writeJson(manifestJson, defaultBuildManifest),
+      fse.copy('template/default-scf-handler.js', entryHandler),
+      fse.copy('template/default-converter.js', utilHandler)
+    ]);
+  }
+
   async build(inputs) {
+    await execa('node_modules/.bin/next', ['build']);
+
     const defaultBuildManifest = await this.prepareBuildManifests(inputs);
 
-    console.log(defaultBuildManifest);
-
+    console.log(JSON.stringify(defaultBuildManifest));
   }
 
-  deploy(inputs) {
-    inputs.exclude = ['.git/**', '.gitignore', '.serverless', '.DS_Store']
-    inputs.runtime = 'Nodejs8.9'
-    inputs.name = inputs.functionName || 'ExpressComponent_' + result
-    inputs.codeUri = inputs.code || process.cwd()
-    // if (!(await utils.fileExists(appFile))) {
-    //   throw new Error(`app.js not found in ${inputs.codeUri}`)
-    // }
+  async deploy(inputs) {
+    inputs.exclude = ['.git/**', '.gitignore', '.serverless', '.DS_Store'];
+    inputs.runtime = 'Nodejs8.9';
+    inputs.name = inputs.name || 'SsrComponent_' + randomName();
+    inputs.codeUri = inputs.code || join(process.cwd(), '.next/serverless');
 
     const tencentCloudFunction = await this.load('@serverless/tencent-scf');
     const tencentApiGateway = await this.load('@serverless/tencent-apigateway');
+
+    if (inputs.functionConf) {
+      inputs.timeout = inputs.functionConf.timeout
+        ? inputs.functionConf.timeout
+        : 3;
+      inputs.memorySize = inputs.functionConf.memorySize
+        ? inputs.functionConf.memorySize
+        : 128;
+      if (inputs.functionConf.environment) {
+        inputs.environment = inputs.functionConf.environment;
+      }
+      if (inputs.functionConf.vpcConfig) {
+        inputs.vpcConfig = inputs.functionConf.vpcConfig;
+      }
+    }
+
+    console.log(inputs);
+
     const tencentCloudFunctionOutputs = await tencentCloudFunction(inputs);
+
+    console.log(3333333333333);
 
     const apigwParam = {
       serviceName: inputs.serviceName,
@@ -106,8 +155,8 @@ class NextjsComponent extends Component {
           }
         }
       ]
-    }
-    
+    };
+
     const tencentApiGatewayOutputs = await tencentApiGateway(apigwParam);
     const outputs = {
       region: inputs.region || 'ap-guangzhou',
@@ -116,13 +165,25 @@ class NextjsComponent extends Component {
       url: `${this.getDefaultProtocol(tencentApiGatewayOutputs.protocols)}://${
         tencentApiGatewayOutputs.subDomain
       }/${tencentApiGatewayOutputs.environment}/`
-    }
+    };
 
-    return outputs
-
+    return outputs;
   }
 }
 
-(new NextjsComponent()).build({name: 'mySSr', code: './example/.next/serverless', handler: 'index.main_handler'})
+new NextjsComponent().build({
+  name: 'mySsr',
+  handler: 'index.main_handler',
+  nextConfigDir: 'example'
+});
 
-// (new NextjsComponent()).deploy({name: 'mySSr', code: './example/.next/serverless', handler: 'index.main_handler'})
+// (new NextjsComponent()).deploy({
+//   name: 'myFunction',
+//   code: './code',
+//   handler: 'index.main_handler',
+//   runtime: 'Nodejs8.9',
+//   // nextConfigDir: 'example',
+//   region: 'ap-shanghai'
+// })
+
+module.exports = NextjsComponent;
