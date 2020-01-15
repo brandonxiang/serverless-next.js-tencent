@@ -1,6 +1,8 @@
 const defaultPath = 'nextjs';
 const manifest = require('./manifest.json');
 const converter = require('./utils');
+const fs = require('fs');
+const path = require('path');
 
 const router = manifest => {
   const {
@@ -37,13 +39,26 @@ const normaliseUri = uri => {
 
 exports.main_handler = async event => {
   const uri = normaliseUri(event.path);
+  const { pages } = manifest;
+
+  const staticPagePath = pages.html.nonDynamic[uri];
+  console.log(staticPagePath);
+  if (staticPagePath) {
+    const html = fs.readFileSync(path.resolve(__dirname, staticPagePath), {
+      encoding: 'utf-8'
+    });
+    return {
+      isBase64Encoded: false,
+      statusCode: 200,
+      headers: { 'Content-Type': 'text/html' },
+      body: html
+    };
+  }
 
   const pagePath = router(manifest)(uri);
-
   const page = require(`./${pagePath}`);
 
   const { req, res, responsePromise } = converter(event);
-
   page.render(req, res);
   return responsePromise;
 };
