@@ -95,7 +95,7 @@ class NextjsComponent extends Component {
   }
 
   async build(inputs) {
-    await execa('node_modules/.bin/next', ['build']);
+    // await execa('node_modules/.bin/next', ['build']);
 
     const defaultBuildManifest = await this.prepareBuildManifests(inputs);
 
@@ -173,19 +173,19 @@ class NextjsComponent extends Component {
   }
 }
 
-// new NextjsComponent().build({
-//   name: 'mySsr',
-//   handler: 'index.main_handler',
-//   nextConfigDir: 'example'
-// });
-
-new NextjsComponent().deploy({
+new NextjsComponent().build({
   name: 'mySsr',
   handler: 'index.main_handler',
-  runtime: 'Nodejs8.9',
-  codeUri: './code',
-  nextConfigDir: 'example',
-  region: 'ap-shanghai'
+  nextConfigDir: 'example'
 });
+
+// new NextjsComponent().deploy({
+//   name: 'mySsr',
+//   handler: 'index.main_handler',
+//   runtime: 'Nodejs8.9',
+//   codeUri: './code',
+//   nextConfigDir: 'example',
+//   region: 'ap-shanghai'
+// });
 
 module.exports = NextjsComponent;
