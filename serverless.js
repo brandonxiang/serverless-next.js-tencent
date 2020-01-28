@@ -106,7 +106,9 @@ class NextjsComponent extends Component {
     inputs.exclude = ['.git/**', '.gitignore', '.serverless', '.DS_Store'];
     inputs.runtime = 'Nodejs8.9';
     inputs.name = inputs.name || 'SsrComponent_' + randomName();
-    inputs.codeUri = inputs.code || join(process.cwd(), '.next/serverless');
+    inputs.codeUri =
+      inputs.code ||
+      join(process.cwd(), inputs.nextConfigDir, '.next/serverless');
 
     const tencentCloudFunction = await this.load('@serverless/tencent-scf');
     const tencentApiGateway = await this.load('@serverless/tencent-apigateway');
@@ -171,19 +173,19 @@ class NextjsComponent extends Component {
   }
 }
 
-new NextjsComponent().build({
+// new NextjsComponent().build({
+//   name: 'mySsr',
+//   handler: 'index.main_handler',
+//   nextConfigDir: 'example'
+// });
+
+new NextjsComponent().deploy({
   name: 'mySsr',
   handler: 'index.main_handler',
-  nextConfigDir: 'example'
+  runtime: 'Nodejs8.9',
+  codeUri: './code',
+  nextConfigDir: 'example',
+  region: 'ap-shanghai'
 });
-
-// (new NextjsComponent()).deploy({
-//   name: 'myFunction',
-//   code: './code',
-//   handler: 'index.main_handler',
-//   runtime: 'Nodejs8.9',
-//   // nextConfigDir: 'example',
-//   region: 'ap-shanghai'
-// })
 
 module.exports = NextjsComponent;
