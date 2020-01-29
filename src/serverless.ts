@@ -1,4 +1,4 @@
-const { Component } = require('@serverless/core');
+import { Component } from '@serverless/core';
 import fse from 'fs-extra';
 import path from 'path';
 import execa from 'execa';
@@ -236,6 +236,10 @@ class NextjsComponent extends Component {
 
     return outputs;
   }
+
+  getDefaultProtocol(protocols: string) {
+    return protocols;
+  }
 }
 
 // new NextjsComponent().build({
@@ -253,4 +257,4 @@ class NextjsComponent extends Component {
 //   region: 'ap-shanghai'
 // });
 
-module.exports = NextjsComponent;
+export default NextjsComponent;
