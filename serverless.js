@@ -2,6 +2,9 @@ const { Component } = require('@serverless/core');
 const fse = require('fs-extra');
 const path = require('path');
 const execa = require('execa');
+const isDynamicRoute = require('./libs/isDynamicRoute');
+const expressifyDynamicRoute = require('./libs/expressifyDynamicRoute');
+const pathToRegexStr = require('./libs/pathToRegexStr');
 
 const { join } = path;
 
@@ -71,10 +74,28 @@ class NextjsComponent extends Component {
 
     Object.keys(pagesManifest).forEach(route => {
       const pageFile = pagesManifest[route];
+
+      const dynamicRoute = isDynamicRoute(route);
+      const expressRoute = dynamicRoute ? expressifyDynamicRoute(route) : null;
+
       if (isHtmlPage(pageFile)) {
-        htmlPages.nonDynamic[route] = pageFile;
+        if (dynamicRoute) {
+          htmlPages.dynamic[expressRoute] = {
+            file: pageFile,
+            regex: pathToRegexStr(expressRoute)
+          };
+        } else {
+          htmlPages.nonDynamic[route] = pageFile;
+        }
       } else {
-        ssrPages.nonDynamic[route] = pageFile;
+        if (dynamicRoute) {
+          ssrPages.dynamic[expressRoute] = {
+            file: pageFile,
+            regex: pathToRegexStr(expressRoute)
+          };
+        } else {
+          ssrPages.nonDynamic[route] = pageFile;
+        }
       }
     });
 
@@ -174,9 +195,9 @@ class NextjsComponent extends Component {
 }
 
 new NextjsComponent().build({
-  name: 'mySsr',
+  name: 'webh5',
   handler: 'index.main_handler',
-  nextConfigDir: 'example'
+  nextConfigDir: 'test/fixtures/app-with-custom-domain'
 });
 
 // new NextjsComponent().deploy({

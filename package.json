@@ -6,7 +6,8 @@
   },
   "dependencies": {
     "@serverless/tencent-apigateway": "^2.0.0",
-    "@serverless/tencent-scf": "^2.0.3"
+    "@serverless/tencent-scf": "^2.0.3",
+    "path-to-regexp": "^3.0.0"
   },
   "devDependencies": {
     "@serverless/core": "^1.1.2",
