@@ -1,40 +1,82 @@
 const { Component } = require('@serverless/core');
-const fse = require('fs-extra');
-const path = require('path');
-const execa = require('execa');
-const isDynamicRoute = require('./libs/isDynamicRoute');
-const expressifyDynamicRoute = require('./libs/expressifyDynamicRoute');
-const pathToRegexStr = require('./libs/pathToRegexStr');
+import fse from 'fs-extra';
+import path from 'path';
+import execa from 'execa';
+import {
+  isDynamicRoute,
+  expressifyDynamicRoute,
+  pathToRegexStr,
+  isHtmlPage,
+  randomName
+} from './helpers';
 
 const { join } = path;
 
-const isHtmlPage = p => p.endsWith('.html');
+export interface InputOptionType {
+  exclude: string[];
+  runtime: string;
+  name: string;
+  codeUri: string;
+  code: string;
+  timeout: number;
+  memorySize: number;
+  environment: string;
+  vpcConfig: string;
+  functionConf: {
+    timeout: number;
+    memorySize: number;
+    environment: string;
+    vpcConfig: string;
+  };
+  serviceName: string;
+  serviceId: string;
+  region: string;
+  apigatewayConf?: {
+    protocols: string;
+    environment: string;
+  };
+}
 
-const randomName = () => {
-  const len = 6;
-  const chars = 'ABCDEFGHJKMNPQRSTWXYZabcdefhijkmnprstwxyz2345678';
-  const maxPos = chars.length;
-  let result = '';
-  for (let i = 0; i < len; i++) {
-    result += chars.charAt(Math.floor(Math.random() * maxPos));
-  }
-  return result;
+export interface InputType extends Partial<InputOptionType> {
+  nextConfigDir: string;
+}
+
+export interface InputDefaultType extends Partial<InputOptionType> {
+  nextConfigDir?: string;
+}
+
+export interface Manifest {
+  pages: {
+    ssr: {
+      dynamic: { [key: string]: { file: string; regex: string } };
+      nonDynamic: { [key: string]: string };
+    };
+    html: {
+      dynamic: { [key: string]: { file: string; regex: string } };
+      nonDynamic: { [key: string]: string };
+    };
+  };
+  publicFiles: any;
+  cloudFrontOrigins: any;
+}
+
+const DefaultOption = {
+  nextConfigDir: './'
 };
 
 class NextjsComponent extends Component {
-  async default(inputs = {}) {
-    await this.build(inputs);
-
-    return this.deploy(inputs);
+  async default(inputs: InputDefaultType = {}) {
+    const _inputs = { ...DefaultOption, ...inputs };
+    await this.build(_inputs);
+    return this.deploy(_inputs);
   }
 
-  async readPagesManifest(nextConfigPath) {
+  async readPagesManifest(nextConfigPath: string) {
     const pagePath = join(
       nextConfigPath,
       '.next/serverless/pages-manifest.json'
     );
-    console.log(pagePath);
-    const hasServerlessPageManifest = await fse.exists(pagePath);
+    const hasServerlessPageManifest = fse.existsSync(pagePath);
 
     if (!hasServerlessPageManifest) {
       return Promise.reject(
@@ -47,14 +89,14 @@ class NextjsComponent extends Component {
     return pagesManifest;
   }
 
-  async prepareBuildManifests(inputs) {
+  async prepareBuildManifests(inputs: InputType) {
     const nextConfigPath = inputs.nextConfigDir
       ? path.resolve(inputs.nextConfigDir)
       : process.cwd();
 
     const pagesManifest = await this.readPagesManifest(nextConfigPath);
 
-    const defaultBuildManifest = {
+    const defaultBuildManifest: Manifest = {
       pages: {
         ssr: {
           dynamic: {},
@@ -76,7 +118,7 @@ class NextjsComponent extends Component {
       const pageFile = pagesManifest[route];
 
       const dynamicRoute = isDynamicRoute(route);
-      const expressRoute = dynamicRoute ? expressifyDynamicRoute(route) : null;
+      const expressRoute = dynamicRoute ? expressifyDynamicRoute(route) : '';
 
       if (isHtmlPage(pageFile)) {
         if (dynamicRoute) {
@@ -104,7 +146,7 @@ class NextjsComponent extends Component {
     return defaultBuildManifest;
   }
 
-  async buildHandler(nextConfigPath, defaultBuildManifest) {
+  async buildHandler(nextConfigPath: string, defaultBuildManifest: Manifest) {
     const manifestJson = join(nextConfigPath, '.next/serverless/manifest.json');
     const entryHandler = join(nextConfigPath, '.next/serverless/index.js');
     const utilHandler = join(nextConfigPath, '.next/serverless/utils.js');
@@ -115,7 +157,7 @@ class NextjsComponent extends Component {
     ]);
   }
 
-  async build(inputs) {
+  async build(inputs: InputType) {
     // await execa('node_modules/.bin/next', ['build']);
 
     const defaultBuildManifest = await this.prepareBuildManifests(inputs);
@@ -123,13 +165,15 @@ class NextjsComponent extends Component {
     console.log(JSON.stringify(defaultBuildManifest));
   }
 
-  async deploy(inputs) {
+  async deploy(inputs: InputType) {
     inputs.exclude = ['.git/**', '.gitignore', '.serverless', '.DS_Store'];
     inputs.runtime = 'Nodejs8.9';
     inputs.name = inputs.name || 'SsrComponent_' + randomName();
-    inputs.codeUri =
-      inputs.code ||
-      join(process.cwd(), inputs.nextConfigDir, '.next/serverless');
+    inputs.codeUri = join(
+      process.cwd(),
+      inputs.nextConfigDir,
+      '.next/serverless'
+    );
 
     const tencentCloudFunction = await this.load('@serverless/tencent-scf');
     const tencentApiGateway = await this.load('@serverless/tencent-apigateway');
@@ -194,11 +238,11 @@ class NextjsComponent extends Component {
   }
 }
 
-new NextjsComponent().build({
-  name: 'webh5',
-  handler: 'index.main_handler',
-  nextConfigDir: 'test/fixtures/app-with-custom-domain'
-});
+// new NextjsComponent().build({
+//   name: 'webh5',
+//   handler: 'index.main_handler',
+//   nextConfigDir: 'test/fixtures/app-with-custom-domain'
+// });
 
 // new NextjsComponent().deploy({
 //   name: 'mySsr',
