@@ -160,7 +160,7 @@ class NextjsComponent extends Component {
   }
 
   async build(inputs: InputType) {
-    // await execa('node_modules/.bin/next', ['build']);
+    await execa('node_modules/.bin/next', ['build']);
 
     const defaultBuildManifest = await this.prepareBuildManifests(inputs);
 
@@ -198,8 +198,6 @@ class NextjsComponent extends Component {
     console.log(inputs);
 
     const tencentCloudFunctionOutputs = await tencentCloudFunction(inputs);
-
-    console.log(3333333333333);
 
     const apigwParam = {
       serviceName: inputs.serviceName,
