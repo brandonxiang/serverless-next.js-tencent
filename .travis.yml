@@ -3,9 +3,6 @@ node_js:
   - 12
 branches:
   only: master
-cache:
-  directories:
-  - node_modules
 script:
   - yarn lint
   - yarn test
