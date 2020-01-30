@@ -1,4 +1,6 @@
-## Need to support
+## Developing
 
+- Static Html
 - Dynamic Route
-- api
+- api need to support
+- customize name
