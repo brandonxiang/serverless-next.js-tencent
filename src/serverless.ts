@@ -72,6 +72,7 @@ class NextjsComponent extends Component {
   }
 
   async readPagesManifest(nextConfigPath: string) {
+    console.log(nextConfigPath);
     const pagePath = join(
       nextConfigPath,
       '.next/serverless/pages-manifest.json'
@@ -90,6 +91,7 @@ class NextjsComponent extends Component {
   }
 
   async prepareBuildManifests(inputs: InputType) {
+    console.log(inputs);
     const nextConfigPath = inputs.nextConfigDir
       ? path.resolve(inputs.nextConfigDir)
       : process.cwd();

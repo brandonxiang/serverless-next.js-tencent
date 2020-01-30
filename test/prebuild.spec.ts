@@ -1,8 +1,16 @@
 import NextjsComponent from '../src/serverless';
+import fs from 'fs';
 
 test('prebuild', () => {
-  new NextjsComponent().prepareBuildManifests({
+  // console.log(NextjsComponent);
+  const nextjsComponent = new NextjsComponent();
+  nextjsComponent.prepareBuildManifests({
     name: 'webh5',
-    nextConfigDir: 'test/fixtures/app-with-custom-domain'
+    nextConfigDir: 'test/fixtures/prebuild'
   });
+
+  const existIndex = fs.existsSync(
+    './fixtures/prebuild/.next/serverless/index.js'
+  );
+  expect(existIndex).toBe(true);
 });
